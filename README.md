@@ -9,8 +9,6 @@
 **Instalasi otomatis panel game server Multicraft dengan fitur lengkap dalam 5 menit!**  
 🔥 Termasuk: Web Server (Apache), Database (MySQL), SSL Gratis (Let's Encrypt), dan Konfigurasi Keamanan Profesional.
 
-![Multicraft Dashboard Preview](https://i.imgur.com/5XJQZ4L.png)
-
 ## 🌟 Fitur Utama
 - ✅ Instalasi 1-komando
 - ✅ Konfigurasi SSL Otomatis
