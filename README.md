@@ -55,7 +55,7 @@ chmod +x multicraft_install.sh
 
 ### 3. Jalankan Instalasi
 ```bash
-sudo ./multalcraft_install.sh
+sudo ./multicraft_install.sh
 ```
 
 ## 🤖 Instalasi Otomatis
