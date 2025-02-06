@@ -124,4 +124,3 @@ Proyek ini dilisensikan di bawah [MIT License](LICENSE) - bebas digunakan untuk 
 [![Sponsor](https://img.shields.io/badge/Buy_Me_A_Coffee-FFDD00?style=for-the-badge&logo=buy-me-a-coffee&logoColor=black)](https://saweria.co/Arpeezy)
 
 > ⚠️ **Disclaimer**: Script ini tidak berafiliasi dengan Multicraft. Selalu backup data penting sebelum melakukan instalasi.
-```
