@@ -26,11 +26,11 @@ bash <(wget -qO- https://raw.githubusercontent.com/rpzfuu/multicraft-papermc-con
 ```
 
 ## 📋 Prasyarat
-- [ ] Domain yang sudah diarahkan ke IP server
-- [ ] Ubuntu 20.04/22.04 LTS
-- [ ] Akses root/sudo
-- [ ] Minimal 2GB RAM
-- [ ] Ruang disk 10GB+
+- [x] Domain yang sudah diarahkan ke IP server
+- [x] Ubuntu 20.04/22.04 LTS
+- [x] Akses root/sudo
+- [x] Minimal 2GB RAM
+- [x] Ruang disk 10GB+
 
 ## 📚 Daftar Isi
 1. [Instalasi Manual](#-instalasi-manual)
