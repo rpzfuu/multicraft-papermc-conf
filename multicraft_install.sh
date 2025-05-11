@@ -3,22 +3,21 @@ set -euo pipefail
 
 # Konfigurasi Awal
 clear
-echo -e "\033[1;36m==== INSTALASI MULTICRAFT 2.5.0 ====\033[0m"
+echo -e "\033[1;36m==== INSTALASI MULTICRAFT 2.5.0 UNTUK UBUNTU 24.04 ====\033[0m"
 echo "Skrip ini akan melakukan instalasi lengkap Multicraft dengan:"
-echo "- Webserver Apache + PHP"
-echo "- Database MySQL"
-echo "- Sertifikat SSL Let's Encrypt"
-echo "- Konfigurasi Keamanan"
-echo -e "\033[1;33mPastikan Anda memiliki akses root dan domain yang sudah diarahkan ke server!\033[0m"
-echo "=============================================="
+echo -e "- PHP 8.1 + Ekstensi yang diperlukan\n- MySQL 8.0\n- Apache 2.4\n- SSL Let's Encrypt"
+echo -e "\033[1;33mPastikan domain sudah diarahkan ke server dan port 80/443 terbuka!\033[0m"
+echo "=============================================================="
 
 # Fungsi Validasi Input
 validasi_input() {
   local prompt=$1
   local validation=$2
+  local default=$3
   local input
   while true; do
     read -p "$prompt" input
+    input=${input:-$default}
     if [[ $input =~ $validation ]]; then
       echo "$input"
       break
@@ -28,30 +27,25 @@ validasi_input() {
   done
 }
 
-# Mengumpulkan Informasi yang Diperlukan
+# Mengumpulkan Informasi
 echo -e "\n\033[1;34m[1/5] KONFIGURASI DASAR\033[0m"
-DOMAIN=$(validasi_input "Masukkan domain lengkap (contoh: multicraft.saya.com): " '^([a-zA-Z0-9-]+\.)+[a-zA-Z]{2,}$')
-EMAIL=$(validasi_input "Masukkan email administrator: " '^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$')
-DAEMON_NUM=$(validasi_input "Masukkan nomor daemon (default 1): " '^[0-9]+$')
-LICENSE_KEY=$(validasi_input "Masukkan license key (atau kosongkan jika tidak ada): " '^.*$')
+DOMAIN=$(validasi_input "Masukkan domain lengkap (contoh: mc.example.com): " '^([a-zA-Z0-9-]+\.)+[a-zA-Z]{2,}$' "")
+EMAIL=$(validasi_input "Masukkan email administrator: " '^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$' "")
+DAEMON_NUM=$(validasi_input "Nomor daemon (default 1): " '^[0-9]+$' "1")
+LICENSE_KEY=$(validasi_input "License key (kosongkan jika tidak ada): " '^.*$' "")
 
+# Validasi Password
 echo -e "\n\033[1;34m[2/5] KONFIGURASI KEAMANAN\033[0m"
-echo "Buat password untuk database dan user sistem:"
-while true; do
-  read -sp "Password (minimal 8 karakter, harus mengandung angka dan simbol): " PASSWORD
-  local symbol_regex='[!@#$%^&*]'  # Menyimpan pola regex dalam variabel
-  if [[ ${#PASSWORD} -ge 8 && "$PASSWORD" =~ [0-9] && "$PASSWORD" =~ $symbol_regex ]]; then
-    echo -e "\n\033[1;32mPassword valid!\033[0m"
-    break
-  else
-    echo -e "\n\033[1;31mPassword tidak memenuhi kriteria! Ulangi.\033[0m"
-  fi
-done
+generate_password() {
+  local length=16
+  tr -dc 'A-Za-z0-9!@#$%^&*()_+{}|<>?' </dev/urandom | head -c $length
+}
 
-# Generate Password Unik
-PANEL_DB_PASS="${PASSWORD}panel#$(openssl rand -base64 3)"
-DAEMON_DB_PASS="${PASSWORD}daemon#$(openssl rand -base64 3)"
-MYSQL_ROOT_PASS=$(openssl rand -base64 12)
+echo "Membuat password aman..."
+MYSQL_ROOT_PASS=$(generate_password)
+PANEL_DB_PASS=$(generate_password)
+DAEMON_DB_PASS=$(generate_password)
+SYS_PASSWORD=$(generate_password)
 
 # Ekspor Variabel
 export DEBIAN_FRONTEND=noninteractive
@@ -60,7 +54,7 @@ export MULTICRAFT_VERSION="2.5.0"
 # Fungsi Error Handling
 handle_error() {
   echo -e "\033[1;31mERROR: Gagal pada langkah $1\033[0m"
-  echo "Detail error tersedia di multicraft_install.log"
+  echo "Detail error: $2"
   exit 1
 }
 
@@ -70,27 +64,26 @@ exec 2>&1
 
 # Header Instalasi
 echo -e "\n\033[1;34m[3/5] MEMULAI INSTALASI\033[0m"
-echo "Detail instalasi akan dicatat di multicraft_install.log"
 
 # Update Sistem
-echo -e "\n--- Memperbarui sistem ---"
-apt-get update -q || handle_error "Update Package"
-apt-get upgrade -y -q || handle_error "System Upgrade"
+echo -e "\n--- Memperbarui Sistem ---"
+apt-get update -q || handle_error "Update System" "$?"
+apt-get upgrade -y -q || handle_error "System Upgrade" "$?"
 
 # Instal Dependensi
-echo -e "\n--- Menginstal dependensi ---"
+echo -e "\n--- Menginstal Paket Utama ---"
 apt-get install -y -q \
   apache2 \
   mysql-server \
-  php \
-  libapache2-mod-php \
-  php-mysql \
-  php-curl \
-  php-gd \
-  php-xml \
-  php-sqlite3 \
-  php-zip \
-  php-mbstring \
+  php8.1 \
+  libapache2-mod-php8.1 \
+  php8.1-mysql \
+  php8.1-curl \
+  php8.1-gd \
+  php8.1-xml \
+  php8.1-sqlite3 \
+  php8.1-zip \
+  php8.1-mbstring \
   openjdk-17-jre-headless \
   zip \
   unzip \
@@ -99,10 +92,11 @@ apt-get install -y -q \
   expect \
   ufw \
   htop \
-  nano || handle_error "Dependency Installation"
+  nano \
+  pwgen || handle_error "Dependency Installation" "$?"
 
 # Konfigurasi Firewall
-echo -e "\n--- Mengatur firewall ---"
+echo -e "\n--- Mengatur Firewall ---"
 ufw allow "OpenSSH"
 ufw allow "Apache Full"
 ufw --force enable
@@ -116,10 +110,10 @@ DELETE FROM mysql.user WHERE User='root' AND Host NOT IN ('localhost', '127.0.0.
 DROP DATABASE IF EXISTS test;
 DELETE FROM mysql.db WHERE Db='test' OR Db='test\\_%';
 FLUSH PRIVILEGES;
-_EOF_ || handle_error "MySQL Secure Installation"
+_EOF_ || handle_error "MySQL Secure Installation" "$?"
 
 # Buat Database
-echo -e "\n--- Membuat database ---"
+echo -e "\n--- Membuat Database ---"
 mysql --user=root --password="${MYSQL_ROOT_PASS}" <<_EOF_
 CREATE DATABASE multicraft_panel;
 CREATE DATABASE multicraft_daemon;
@@ -128,19 +122,21 @@ CREATE USER 'multicraft_daemon'@'localhost' IDENTIFIED BY '${DAEMON_DB_PASS}';
 GRANT ALL PRIVILEGES ON multicraft_panel.* TO 'multicraft_panel'@'localhost';
 GRANT ALL PRIVILEGES ON multicraft_daemon.* TO 'multicraft_daemon'@'localhost';
 FLUSH PRIVILEGES;
-_EOF_ || handle_error "Database Creation"
+_EOF_ || handle_error "Database Creation" "$?"
 
-# Konfigurasi PHP
-echo -e "\n--- Mengoptimalkan PHP ---"
-PHP_INI="/etc/php/$(php -v | head -n1 | cut -d' ' -f2 | cut -d'.' -f1,2)/apache2/php.ini"
-sed -i -e 's/^max_execution_time =.*/max_execution_time = 180/' \
-       -e 's/^memory_limit =.*/memory_limit = 256M/' \
-       -e 's/^upload_max_filesize =.*/upload_max_filesize = 128M/' \
-       -e 's/^post_max_size =.*/post_max_size = 128M/' \
-       "$PHP_INI" || handle_error "PHP Configuration"
+# Optimasi PHP untuk Ubuntu 24.04
+echo -e "\n--- Mengoptimalkan PHP 8.1 ---"
+PHP_INI="/etc/php/8.1/apache2/php.ini"
+sed -i \
+  -e 's/^max_execution_time =.*/max_execution_time = 180/' \
+  -e 's/^memory_limit =.*/memory_limit = 512M/' \
+  -e 's/^upload_max_filesize =.*/upload_max_filesize = 256M/' \
+  -e 's/^post_max_size =.*/post_max_size = 256M/' \
+  -e 's/^max_input_vars =.*/max_input_vars = 5000/' \
+  "$PHP_INI" || handle_error "PHP Configuration" "$?"
 
 # Konfigurasi Apache
-echo -e "\n--- Mengatur virtual host ---"
+echo -e "\n--- Membuat Virtual Host ---"
 cat > /etc/apache2/sites-available/multicraft.conf <<EOF
 <VirtualHost *:80>
     ServerName ${DOMAIN}
@@ -171,21 +167,21 @@ EOF
 a2ensite multicraft.conf
 a2dissite 000-default.conf
 a2enmod rewrite ssl
-systemctl restart apache2 || handle_error "Apache Restart"
+systemctl restart apache2 || handle_error "Apache Restart" "$?"
 
-# Mengambil Sertifikat SSL
-echo -e "\n--- Membuat SSL dengan Certbot ---"
-certbot --apache --non-interactive --agree-tos --email ${EMAIL} -d ${DOMAIN} || handle_error "SSL Generation"
+# Generate SSL Certificate
+echo -e "\n--- Membuat SSL Certificate ---"
+certbot --apache --non-interactive --agree-tos --email ${EMAIL} -d ${DOMAIN} || handle_error "SSL Generation" "$?"
 
-# Unduh dan Ekstrak Multicraft
+# Install Multicraft
 echo -e "\n--- Mengunduh Multicraft ${MULTICRAFT_VERSION} ---"
-cd /tmp || handle_error "Temp Directory"
-wget -q "https://www.multicraft.org/download/linux64?version=${MULTICRAFT_VERSION}" -O multicraft.tar.gz || handle_error "Download Multicraft"
-tar xzf multicraft.tar.gz || handle_error "Extract Multicraft"
-cd multicraft || handle_error "Multicraft Directory"
+cd /tmp || handle_error "Change Directory" "$?"
+wget -q "https://www.multicraft.org/download/linux64?version=${MULTICRAFT_VERSION}" -O multicraft.tar.gz || handle_error "Download Multicraft" "$?"
+tar xzf multicraft.tar.gz || handle_error "Extract Multicraft" "$?"
+cd multicraft || handle_error "Enter Multicraft Directory" "$?"
 
-# Otomasi Instalasi
-echo -e "\n--- Melakukan instalasi otomatis ---"
+# Automated Setup dengan Expect
+echo -e "\n--- Instalasi Otomatis Multicraft ---"
 /usr/bin/expect <<EOD
 set timeout 300
 spawn ./setup.sh
@@ -218,7 +214,7 @@ expect "Location of the web panel files:"
 send "/var/www/html/multicraft\r"
 
 expect "Please enter a new daemon password:"
-send "${PASSWORD}\r"
+send "${SYS_PASSWORD}\r"
 
 expect "Enable builtin FTP server?"
 send "y\r"
@@ -264,28 +260,28 @@ send "y\r"
 
 expect eof
 EOD
-[ $? -eq 0 ] || handle_error "Automated Setup"
+[ $? -eq 0 ] || handle_error "Multicraft Setup" "$?"
 
-# Konfigurasi Tambahan
-echo -e "\n--- Menyempurnakan konfigurasi ---"
-sed -i "s/^daemon_db_user =.*/daemon_db_user = multicraft_daemon/" /home/minecraft/multicraft/multicraft.conf
-sed -i "s/^daemon_db_password =.*/daemon_db_password = ${DAEMON_DB_PASS}/" /home/minecraft/multicraft/multicraft.conf
+# Final Configuration
+echo -e "\n--- Konfigurasi Akhir ---"
+sed -i "s/^user =.*/user = minecraft/" /home/minecraft/multicraft/multicraft.conf
+sed -i "s/^password =.*/password = ${SYS_PASSWORD}/" /home/minecraft/multicraft/multicraft.conf
 
-# Keamanan Panel
-echo "Order deny,allow
-Deny from all" > /var/www/html/multicraft/protected/.htaccess
+# File Permissions
+chown -R minecraft:minecraft /home/minecraft/multicraft
 chown -R www-data:www-data /var/www/html/multicraft
 find /var/www/html/multicraft -type d -exec chmod 755 {} \;
 find /var/www/html/multicraft -type f -exec chmod 644 {} \;
 
 # Systemd Service
-echo -e "\n--- Membuat systemd service ---"
+echo -e "\n--- Membuat Systemd Service ---"
 cat > /etc/systemd/system/multicraft.service <<EOF
 [Unit]
 Description=Multicraft Daemon
 After=network.target
 
 [Service]
+Type=forking
 User=minecraft
 Group=minecraft
 WorkingDirectory=/home/minecraft/multicraft
@@ -300,20 +296,26 @@ EOF
 
 systemctl daemon-reload
 systemctl enable multicraft
-systemctl start multicraft || handle_error "Service Start"
+systemctl start multicraft || handle_error "Start Service" "$?"
 
 # Finalisasi
-echo -e "\n\033[1;34m[5/5] FINALISASI INSTALASI\033[0m"
+echo -e "\n\033[1;34m[5/5] FINALISASI\033[0m"
 rm -rf /var/www/html/multicraft/install.php
-mysqladmin -u root -p"${MYSQL_ROOT_PASS}" password "${PASSWORD}"
+mysqladmin -u root -p"${MYSQL_ROOT_PASS}" password "${SYS_PASSWORD}"
 
-# Informasi Login
+# Hasil Instalasi
 echo -e "\n\033[1;32m==== INSTALASI BERHASIL ====\033[0m"
-echo "Akses Panel: https://${DOMAIN}/multicraft"
+echo "Akses Panel: https://${DOMAIN}"
 echo "Username Admin: admin"
-echo "Password Admin: admin (Segera ganti setelah login!)"
+echo "Password Admin: admin (Ganti segera setelah login!)"
+
 echo -e "\n\033[1;33m=== INFORMASI DATABASE ==="
-echo -e "Root Password: ${MYSQL_ROOT_PASS}"
+echo -e "MySQL Root Password: ${MYSQL_ROOT_PASS}"
 echo -e "Panel DB User: multicraft_panel\nPassword: ${PANEL_DB_PASS}"
 echo -e "Daemon DB User: multicraft_daemon\nPassword: ${DAEMON_DB_PASS}\033[0m"
-echo -e "\n\033[1;33mSimpan informasi ini di tempat aman!\033[0m"
+
+echo -e "\n\033[1;33m=== INFORMASI LOGIN SISTEM ==="
+echo -e "Minecraft User: minecraft"
+echo -e "Password Sistem: ${SYS_PASSWORD}\033[0m"
+
+echo -e "\n\033[1;31mSimpan informasi ini di tempat aman!\033[0m"
