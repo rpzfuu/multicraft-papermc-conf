@@ -39,7 +39,8 @@ echo -e "\n\033[1;34m[2/5] KONFIGURASI KEAMANAN\033[0m"
 echo "Buat password untuk database dan user sistem:"
 while true; do
   read -sp "Password (minimal 8 karakter, harus mengandung angka dan simbol): " PASSWORD
-  if [[ ${#PASSWORD} -ge 8 && "$PASSWORD" =~ [0-9] && "$PASSWORD" =~ [!@#$%^&*] ]]; then
+  local symbol_regex='[!@#$%^&*]'  # Menyimpan pola regex dalam variabel
+  if [[ ${#PASSWORD} -ge 8 && "$PASSWORD" =~ [0-9] && "$PASSWORD" =~ $symbol_regex ]]; then
     echo -e "\n\033[1;32mPassword valid!\033[0m"
     break
   else
